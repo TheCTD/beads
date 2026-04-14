@@ -3,7 +3,6 @@
   self,
   buildGoModule,
   git,
-  icu,
   ...
 }:
 buildGoModule {
@@ -16,25 +15,25 @@ buildGoModule {
   subPackages = [ "cmd/bd" ];
   doCheck = false;
 
+  # gms_pure_go uses Go's stdlib regex instead of ICU-backed go-icu-regex.
+  # Beads does not use SQL REGEXP functions so there is no functional impact,
+  # and this avoids a C/ICU build dependency in the Nix sandbox.
+  # See: https://github.com/gastownhall/beads/pull/3066
+  tags = [ "gms_pure_go" ];
+
   # Go module dependencies hash - if build fails with hash mismatch, update with the "got:" value
-  vendorHash = "sha256-7eb7u47f4/OCnK/T56Zd6b5XUyV6vkBmissryBxANBU=";
+  vendorHash = "sha256-7DJgqJX2HDa9gcGD8fLNHLIXvGAEivYeDYx3snCUyCE=";
 
   # Relax go.mod version for Nix: nixpkgs Go may lag behind the latest
   # patch release, and GOTOOLCHAIN=auto can't download in the Nix sandbox.
   postPatch = ''
     goVer="$(go env GOVERSION | sed 's/^go//')"
     go mod edit -go="$goVer"
-
-    env
   '';
 
   # Allow patch-level toolchain upgrades when a dependency's minimum Go patch
   # version is newer than nixpkgs' bundled patch version.
   env.GOTOOLCHAIN = "auto";
-  # Due to https://github.com/dolthub/go-icu-regex, which requires
-  # separate install of icu headers and library.
-  env.CGO_CPPFLAGS="-I${icu.dev}/include";
-  env.CGO_LDFLAGS="-L${icu}/lib";
 
   # Git is required for tests
   nativeBuildInputs = [ git ];
